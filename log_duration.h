@@ -2,33 +2,34 @@
 
 #include <chrono>
 #include <iostream>
-#include <string>
 
-using namespace std;
-using namespace std::chrono;
+#define PROFILE_CONCAT_INTERNAL(X, Y) X##Y
+#define PROFILE_CONCAT(X, Y) PROFILE_CONCAT_INTERNAL(X, Y)
+#define UNIQUE_VAR_NAME_PROFILE PROFILE_CONCAT(profileGuard, __LINE__)
+#define LOG_DURATION(x) LogDuration UNIQUE_VAR_NAME_PROFILE(x)
+#define LOG_DURATION_STREAM(x, y) LogDuration UNIQUE_VAR_NAME_PROFILE(x, y)
 
 class LogDuration {
 public:
-    explicit LogDuration(const string& msg = "")
-        : message(msg + ": ")
-        , start(high_resolution_clock::now())
-    {
+    
+    using Clock = std::chrono::steady_clock;
+
+    LogDuration(const std::string& text, std::ostream& output = std::cerr)
+        : text_(text)
+        , output_(output) {
     }
 
     ~LogDuration() {
-        auto finish = high_resolution_clock::now();
-        auto dur = finish - start;
-        cerr << message
-            << duration_cast<microseconds>(dur).count()
-            << " microseconds" << endl;
+        using namespace std::chrono;
+        using namespace std::literals;
+
+        const auto end_time = Clock::now();
+        const auto dur = end_time - start_time_;
+        output_ << text_ << ": "s << duration_cast<milliseconds>(dur).count() << " ms"s << std::endl;
     }
+
 private:
-    string message;
-    high_resolution_clock::time_point start;
+    const std::string text_;
+    std::ostream& output_;
+    const Clock::time_point start_time_ = Clock::now();
 };
-
-#define UNIQ_ID_IMPL(lineno) _a_local_var_##lineno
-#define UNIQ_ID(lineno) UNIQ_ID_IMPL(lineno)
-
-#define LOG_DURATION(message) \
-  LogDuration UNIQ_ID(__LINE__){message};
